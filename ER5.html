@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PROTOCOLO DE EMERGENCIA: TELECONTROL AGUAS NUEVAS (60 MIN)</title>
+    <style>
+        :root {
+            --bg-dark: #050811;
+            --panel-bg: #0d1527;
+            --accent-lime: #ccff00;
+            --accent-cyan: #00f0ff;
+            --accent-green: #00ff66;
+            --accent-red: #ff2a2a;
+            --accent-warn: #ffb700;
+            --text-main: #f8fafc;
+            --text-muted: #64748b;
+            --border: #1e293b;
+        }
+
+        body {
+            font-family: 'Consolas', 'Courier New', monospace;
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            margin: 0;
+            padding: 15px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            transition: background-color 0.3s ease;
+        }
+
+        /* EFECTO BLOQUEO PANTALLA ROJA */
+        body.lockout-alert {
+            background-color: #4a0000 !important;
+            animation: pulse-red 0.8s infinite alternate;
+        }
+
+        @keyframes pulse-red {
+            from { background-color: #300000; }
+            to { background-color: #800000; }
+        }
+
+        .dashboard {
+            max-width: 900px;
+            width: 100%;
+            background-color: var(--panel-bg);
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            box-shadow: 0 0 30px rgba(0, 240, 255, 0.1);
+            overflow: hidden;
+            position: relative;
+            transition: border-color 0.3s ease;
+        }
+
+        body.lockout-alert .dashboard {
+            border-color: var(--accent-red);
+            box-shadow: 0 0 40px rgba(255, 42, 42, 0.6);
+        }
+
+        .dashboard::before {
+            content: " ";
+            display: block;
+            position: absolute;
+            top: 0; left: 0; bottom: 0; right: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%);
+            background-size: 100% 4px;
+            z-index: 10;
+            pointer-events: none;
+            opacity: 0.6;
+        }
+
+        .brand-header {
+            background-color: #03060d;
+            padding: 12px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid var(--border);
+        }
+
+        .brand-logo-an {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .an-symbol {
+            font-size: 24px;
+            font-weight: 900;
+            color: var(--accent-lime);
+            border: 2px solid var(--accent-lime);
+            padding: 2px 8px;
+            border-radius: 4px;
+            box-shadow: 0 0 10px rgba(204, 255, 0, 0.3);
+        }
+
+        .an-title {
+            font-size: 1em;
+            font-weight: bold;
+            color: #ffffff;
+            letter-spacing: 1px;
+        }
+
+        .an-sub {
+            font-size: 0.65em;
+            color: var(--text-muted);
+            display: block;
+        }
+
+        .timer-display {
+            background: #000;
+            border: 1px solid var(--accent-red);
+            padding: 4px 12px;
+            border-radius: 4px;
+            color: var(--accent-red);
+            font-size: 1.2em;
+            font-weight: bold;
+            letter-spacing: 2px;
+            box-shadow: 0 0 8px rgba(255, 42, 42, 0.4);
+        }
+
+        .header-panel {
+            background-color: #070d19;
+            padding: 12px 20px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .status-badge {
+            background-color: rgba(255, 42, 42, 0.15);
+            color: var(--accent-red);
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 0.75em;
+            font-weight: bold;
+            border: 1px solid var(--accent-red);
+            animation: blink 1.5s infinite;
+        }
+
+        @keyframes blink {
+            50% { opacity: 0.4; }
+        }
+
+        .status-badge.online {
+            background-color: rgba(0, 255, 102, 0.15);
+            color: var(--accent-green);
+            border-color: var(--accent-green);
+            animation: none;
+        }
+
+        .progress-bar-container {
+            width: 100%;
+            background-color: #000;
+            height: 6px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            width: 0%;
+            background-color: var(--accent-cyan);
+            box-shadow: 0 0 10px var(--accent-cyan);
+            transition: width 0.4s ease;
+        }
+
+        .content {
+            padding: 25px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .level-card {
+            display: none;
+        }
+
+        .level-card.active {
+            display: block;
+            animation: fadeIn 0.3s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.99); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        .scenario-box {
+            background-color: #03060d;
+            border-left: 3px solid var(--accent-cyan);
+            padding: 15px;
+            border-radius: 0 6px 6px 0;
+            margin-bottom: 20px;
+            line-height: 1.5;
+            font-size: 0.9em;
+        }
+
+        .terminal-log {
+            color: var(--accent-warn);
+            font-size: 0.8em;
+            margin-bottom: 10px;
+            display: block;
+        }
+
+        .input-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-top: 15px;
+            background-color: rgba(0, 0, 0, 0.3);
+            padding: 15px;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+        }
+
+        input[type="number"] {
+            background-color: #03060d;
+            border: 1px solid var(--border);
+            color: var(--accent-cyan);
+            padding: 12px;
+            border-radius: 4px;
+            font-family: inherit;
+            font-size: 1.1em;
+            outline: none;
+        }
+
+        input[type="number"]:focus {
+            border-color: var(--accent-cyan);
+            box-shadow: 0 0 8px rgba(0, 240, 255, 0.3);
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 10px;
+        }
+
+        button.btn-action {
+            flex: 2;
+            background-color: var(--accent-cyan);
+            color: #000;
+            font-weight: bold;
+            border: none;
+            padding: 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 0.9em;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: all 0.2s;
+        }
+
+        button.btn-hint {
+            flex: 1;
+            background-color: transparent;
+            color: var(--accent-warn);
+            border: 1px solid var(--accent-warn);
+            padding: 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 0.8em;
+            transition: all 0.2s;
+        }
+
+        button:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+
+        .feedback {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 4px;
+            display: none;
+            font-size: 0.85em;
+        }
+
+        .feedback.error {
+            background-color: rgba(255, 42, 42, 0.1);
+            border: 1px solid var(--accent-red);
+            color: var(--accent-red);
+            display: block;
+        }
+
+        .hint-box {
+            margin-top: 10px;
+            padding: 10px;
+            background-color: rgba(255, 183, 0, 0.05);
+            border-left: 3px solid var(--accent-warn);
+            color: #ffe082;
+            font-size: 0.8em;
+            display: none;
+        }
+
+        .widget-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .widget {
+            background-color: #03060d;
+            padding: 10px;
+            border-radius: 4px;
+            border: 1px solid var(--border);
+            text-align: center;
+        }
+
+        .widget .val {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: var(--accent-lime);
+        }
+
+        .widget .lbl {
+            font-size: 0.7em;
+            color: var(--text-muted);
+            text-transform: uppercase;
+        }
+    </style>
+</head>
+<body>
+
+<div class="dashboard">
+    <div class="brand-header">
+        <div class="brand-logo-an">
+            <div class="an-symbol">AN</div>
+            <div>
+                <span class="an-title">CIFP AGUAS NUEVAS</span>
+                <span class="an-sub">Módulo: Gestión del Montaje de Parques Eólicos</span>
+            </div>
+        </div>
+        <div class="timer-display" id="timer">60:00</div>
+    </div>
+
+    <div class="header-panel">
+        <div>
+            <span style="font-weight:bold; color:var(--text-main); font-size: 0.9em;">SUBESTACIÓN CENTRAL & GÓNDOLA TURB-04</span>
+            <span style="color:var(--text-muted); font-size:0.75em; display:block;" id="phase-counter">Fase 0 de 12</span>
+        </div>
+        <div id="status-badge" class="status-badge">BLOQUEO DE SEGURIDAD</div>
+    </div>
+    
+    <div class="progress-bar-container">
+        <div class="progress-fill" id="progress"></div>
+    </div>
+
+    <div class="content">
+
+        <!-- INTRODUCCIÓN -->
+        <div class="level-card active" id="level-0">
+            <span class="terminal-log">> INICIANDO DIAGNÓSTICO GENERAL DE RED...</span>
+            <div class="scenario-box">
+                <strong>¡ALERTA MÁXIMA DE SUBESTACIÓN!</strong> Un fallo en la red eléctrica principal ha bloqueado los 12 subsistemas críticos del aerogenerador TURB-04. Tenéis <strong>60 minutos</strong> para recalibrar numéricamente cada módulo operativo.<br><br>
+                ⚠️ <strong>AVISO DE SEGURIDAD:</strong> El cortafuegos bloqueará temporalmente el sistema en modo de alarma si detecta 5 intentos fallidos consecutivos en una misma fase.
+            </div>
+            <button class="btn-action" style="width:100%" onclick="startEscapeRoom()">[ Iniciar Desbloqueo SCADA ]</button>
+        </div>
+
+        <!-- FASE 1 -->
+        <div class="level-card" id="level-1">
+            <span class="terminal-log">> ERR #101: DENSIDAD ACEITE PITCH</span>
+            <h4 style="margin:5px 0 15px 0; color:var(--accent-cyan);">FASE 1: FLUIDO DE ORIENTACIÓN DE PALAS</h4>
+            <div class="scenario-box">
+                El depósito hidráulico tiene <strong>38 L</strong> (0,038 m³). El sensor de masa registra un peso del fluido de <strong>1.030 N</strong> (g = 9,81 m/s²). Introduce la densidad en <strong>kg/m³</strong> (entero más cercano).
+            </div>
+            <div class="widget-grid">
+                <div class="widget"><div class="val">38 L</div><div class="lbl">Volumen</div></div>
+                <div class="widget"><div class="val">1.030 N</div><div class="lbl">Peso Registrado</div></div>
+            </div>
+            <div class="input-panel">
+                <input type="number" id="in-1" placeholder="Densidad (kg/m³)">
+                <div class="btn-group">
+                    <button class="btn-action" onclick="checkAnswer(1, 2750, 2770)">[ Validar ]</button>
+                    <button class="btn-hint" onclick="showHint(1)">[ Pista (-3 min) ]</button>
+                </div>
+            </div>
+            <div class="feedback" id="fb-1"></div>
+            <div class="hint-box" id="hint-1">💡 Convierte el peso a masa mediante la aceleración de la gravedad antes de determinar el cociente volumétrico. m=P/g, Densidad()=m/V </div>
+        </div>
+
+        <!-- FASE 2 -->
+        <div class="level-card" id="level-2">
+            <span class="terminal-log">> ERR #102: MANÓMETRO FRENO MECÁNICO</span>
+            <h4 style="margin:5px 0 15px 0; color:var(--accent-cyan);">FASE 2: PRESIÓN DE FRENO DE BUJE</h4>
+            <div class="scenario-box">
+                El cilindro neumático aplica <strong>500 N</strong> sobre un émbolo de <strong>2.500 mm²</strong> (0,0025 m²). ¿A cuántos <strong>bar</strong> equivale la presión actuante? (1 decimal).
+            </div>
+            <div class="widget-grid">
+                <div class="widget"><div class="val">2.500 mm²</div><div class="lbl">Sección</div></div>
+                <div class="widget"><div class="val">500 N</div><div class="lbl">Fuerza</div></div>
+            </div>
+            <div class="input-panel">
+                <input type="number" step="0.1" id="in-2" placeholder="Presión (bar)">
+                <div class="btn-group">
+                    <button class="btn-action" onclick="checkAnswer(2, 1.9, 2.1)">[ Validar ]</button>
+                    <button class="btn-hint" onclick="showHint(2)">[ Pista (-3 min) ]</button>
+                </div>
+            </div>
+            <div class="feedback" id="fb-2"></div>
+            <div class="hint-box" id="hint-2">💡 Calcula primero la fuerza por unidad de superficie en Sistema Internacional (Pa)(1 bar = 100.000 Pa) y escala por un factor para pasar a bar (10^5) /. Presión (bar)=Fuerza(Newton)/Area (m2) ¡¡Cuidado con los m2!!</div>
+        </div>
+
+        <!-- FASE 3 -->
+        <div class="level-card" id="level-3">
+            <span class="terminal-log">> ERR #103: CALOR EN RESISTENCIAS</span>
+            <h4 style="margin:5px 0 15px 0; color:var(--accent-cyan);">FASE 3: PURGA ENERGÉTICA EN JULIOS</h4>
+            <div class="scenario-box">
+                El freno disipador ha acumulado <strong>30 kcal</strong> térmicas. Introduce el valor equivalente en <strong>Julios (J)</strong>.
+            </div>
+            <div class="widget-grid">
+                <div class="widget"><div class="val">30 kcal</div><div class="lbl">Energía Térmica</div></div>
+            </div>
+            <div class="input-panel">
+                <input type="number" id="in-3" placeholder="Energía (J)">
+                <div class="btn-group">
+                    <button class="btn-action" onclick="checkAnswer(3, 125000, 126000)">[ Validar ]</button>
+                    <button class="btn-hint" onclick="showHint(3)">[ Pista (-3 min) ]</button>
+                </div>
+            </div>
+            <div class="feedback" id="fb-3"></div>
+            <div class="hint-box" id="hint-3">💡 Aplica el equivalente mecánico del calor (1 cal ≈ 4,18 J) ajustando el prefijo kilo.</div>
+        </div>
+
+        <!-- FASE 4 -->
+        <div class="level-card" id="level-4">
+            <span class="terminal-log">> ERR #104: MOTOR AUXILIAR OVERHEAT</span>
+            <h4 style="margin:5px 0 15px 0; color:var(--accent-cyan);">FASE 4: POTENCIA DEL MOTOR AUXILIAR</h4>
+            <div class="scenario-box">
+                El motor auxiliar consume <strong>2.000 W</strong> eléctricos. ¿A cuántas <strong>kcal/h</strong> equivale dicha potencia? (Aproxima al entero más cercano).
+            </div>
+            <div class="widget-grid">
+                <div class="widget"><div class="val">2.000 W</div><div class="lbl">Consumo Eléctrico</div></div>
+            </div>
+            <div class="input-panel">
+                <input type="number" id="in-4" placeholder="Potencia (kcal/h)">
+                <div class="btn-group">
+                    <button class="btn-action" onclick="checkAnswer(4, 1710, 1730)">[ Validar ]</button>
+                    <button class="btn-hint" onclick="showHint(4)">[ Pista (-3 min) ]</button>
+                </div>
+            </div>
+            <div class="feedback" id="fb-4"></div>
+            <div class="hint-box" id="hint-4">💡 Recuerda la constante de conversión térmica para potencias continuas: 1 W ≈ 0,86 kcal/h.</div>
+        </div>
+
+        <!-- FASE 5 -->
+        <div class="level-card" id="level-5">
+            <span class="terminal-log">> ERR #105: DESFASE CINEMÁTICO ROTOR</span>
+            <h4 style="margin:5px 0 15px 0; color:var(--accent-cyan);">FASE 5: CINEMÁTICA DEL ROTOR</h4>
+            <div class="scenario-box">
+                El piñón del engranaje gira a <strong>1.000 rpm</strong> con un radio de <strong>0,35 m</strong>. Calcula la velocidad lineal periférica en <strong>m/s</strong> (1 decimal).
+            </div>
+            <div class="widget-grid">
+                <div class="widget"><div class="val">1.000 rpm</div><div class="lbl">Régimen Giro</div></div>
+                <div class="widget"><div class="val">0,35 m</div><div class="lbl">Radio Piñón</div></div>
+            </div>
+            <div class="input-panel">
+                <input type="number" step="0.1" id="in-5" placeholder="Velocidad (m/s)">
+                <div class="btn-group">
+                    <button class="btn-action" onclick="checkAnswer(5, 36.0, 37.2)">[ Validar ]</button>
+                    <button class="btn-hint" onclick="showHint(5)">[ Pista (-3 min) ]</button>
+                </div>
+            </div>
+            <div class="feedback" id="fb-5"></div>
+            <div class="hint-box" id="hint-5">💡 Pasa la velocidad angular a rad/s dividiendo por 60 y multiplicando por 2π antes de multiplicarla por el radio. w=(2.pi.N(rpm))/60seg   v=w.r </div>
+        </div>
+
+        <!-- FASE 6 -->
+        <div class="level-card" id="level-6">
+            <span class="terminal-log">> ERR #106: TORK APRIETE BRIDA TORRE</span>
+            <h4 style="margin:5px 0 15px 0; color:var(--accent-cyan);">FASE 6: MOMENTO DE APRIETE DE TORNILLERÍA M36</h4>
+            <div class="scenario-box">
+                Durante la revisión del tramo superior, se debe aplicar una fuerza perpendicular de <strong>8.500 N</strong> en el extremo de la llave de extensión hidromecánica de <strong>1,2 metros</strong>. Calcula el Par de Apriete resultante en <strong>N·m</strong>.
+            </div>
+            <div class="widget-grid">
+                <div class="widget"><div class="val">8.500 N</div><div class="lbl">Fuerza Tangencial</div></div>
+                <div class="widget"><div class="val">1,2 m</div><div class="lbl">Brazo de Palanca</div></div>
+            </div>
+            <div class="input-panel">
+                <input type="number" id="in-6" placeholder="Par (N·m)">
+                <div class="btn-group">
+                    <button class="btn-action" onclick="checkAnswer(6, 10190, 10210)">[ Validar ]</button>
+                    <button class="btn-hint" onclick="showHint(6)">[ Pista (-3 min) ]</button>
+                </div>
+            </div>
+            <div class="feedback" id="fb-6"></div>
+            <div class="hint-box" id="hint-6">💡 El par es el producto directo entre el brazo de palanca y la fuerza tangencial aplicada. M=F.d </div>
+        </div>
+
+        <!-- FASE 7 -->
+        <div class="level-card" id="level-7">
+            <span class="terminal-log">> ERR #107: CAÍDA DE TENSIÓN LÍNEA EVACUACIÓN</span>
+            <h4 style="margin:5px 0 15px 0; color:var(--accent-cyan);">FASE 7: LEY DE OHM EN CABLEADO DE BANCADA</h4>
+            <div class="scenario-box">
+                La línea trifásica interior de 690 V presenta una resistencia por fase de <strong>0,04 Ω</strong>. Al operar a plena potencia, la intensidad circulante es de <strong>250 A</strong>. ¿Cuál es la caída de tensión por fase en <strong>Voltios (V)</strong>?
+            </div>
+            <div class="widget-grid">
+                <div class="widget"><div class="val">250 A</div><div class="lbl">Intensidad</div></div>
+                <div class="widget"><div class="val">0,04 Ω</div><div class="lbl">Resistencia</div></div>
+            </div>
+            <div class="input-panel">
+                <input type="number" id="in-7" placeholder="Caída de Tensión (V)">
+                <div class="btn-group">
+                    <button class="btn-action" onclick="checkAnswer(7, 9.9, 10.1)">[ Validar ]</button>
+                    <button class="btn-hint" onclick="showHint(7)">[ Pista (-3 min) ]</button>
+                </div>
+            </div>
+            <div class="feedback" id="fb-7"></div>
+            <div class="hint-box" id="hint-7">💡 Relaciona la oposición al paso de corriente con la intensidad que fluye por el conductor. V=I.R</div>
+        </div>
+
+        <!-- FASE 8 -->
+        <div class="level-card" id="level-8">
+            <span class="terminal-log">> ERR #108: POTENCIA VIENTO (LÍMITE DE BETZ)</span>
+            <h4 style="margin:5px 0 15px 0; color:var(--accent-cyan);">FASE 8: POTENCIA CINÉTICA DEL VIENTO</h4>
+            <div class="scenario-box">
+                Un frente de aire de densidad ρ = <strong>1,2 kg/m³</strong> incide a <strong>10 m/s</strong> sobre un área barreda de rotor de <strong>2.000 m²</strong>. Calcula la potencia cinética total del viento incidente en <strong>kW</strong>.
+            </div>
+            <div class="widget-grid">
+                <div class="widget"><div class="val">1,2 kg/m³</div><div class="lbl">Densidad Aire</div></div>
+                <div class="widget"><div class="val">10 m/s</div><div class="lbl">Velocidad Viento</div></div>
+                <div class="widget"><div class="val">2.000 m²</div><div class="lbl">Área Barreda</div></div>
+            </div>
+            <div class="input-panel">
+                <input type="number" id="in-8" placeholder="Potencia Viento (kW)">
+                <div class="btn-group">
+                    <button class="btn-action" onclick="checkAnswer(8, 1195, 1205)">[ Validar ]</button>
+                    <button class="btn-hint" onclick="showHint(8)">[ Pista (-3 min) ]</button>
+                </div>
+            </div>
+            <div class="feedback" id="fb-8"></div>
+            <div class="hint-box" id="hint-8">💡 FÍSICA EÓLICA: La potencia del viento es P = 0,5 · ρ · A · v³. Eleva primero la velocidad al cubo, multiplica por el área y por la densidad y divide entre 2. El resultado estará en W; no olvides pasarlo a kW.</div>
+        </div>
+
+        <!-- FASE 9 -->
+        <div class="level-card" id="level-9">
+            <span class="terminal-log">> ERR #109: PÉRDIDAS EN TRANSFORMADOR</span>
+            <h4 style="margin:5px 0 15px 0; color:var(--accent-cyan);">FASE 9: RENDIMIENTO DEL TRANSFORMADOR DE PEANA</h4>
+            <div class="scenario-box">
+                El trafo de peana de la turbina recibe <strong>2.500 kW</strong> de la multiplicadora y entrega a la red interna <strong>2.425 kW</strong>. ¿Cuál es el porcentaje de <strong>rendimiento η (%)</strong> de dicho equipo?
+            </div>
+            <div class="widget-grid">
+                <div class="widget"><div class="val">2.500 kW</div><div class="lbl">Potencia Entrada</div></div>
+                <div class="widget"><div class="val">2.425 kW</div><div class="lbl">Potencia Salida</div></div>
+            </div>
+            <div class="input-panel">
+                <input type="number" step="0.1" id="in-9" placeholder="Rendimiento (%)">
+                <div class="btn-group">
+                    <button class="btn-action" onclick="checkAnswer(9, 96.9, 97.1)">[ Validar ]</button>
+                    <button class="btn-hint" onclick="showHint(9)">[ Pista (-3 min) ]</button>
+                </div>
+            </div>
+            <div class="feedback" id="fb-9"></div>
+            <div class="hint-box" id="hint-9">💡 ANÁLISIS DE EFICIENCIA: El rendimiento se calcula dividiendo la potencia útil aprovechada entre la potencia total introducida al sistema (η = P_salida / P_entrada). Recuerda poner el valor en %.</div>
+        </div>
+
+        <!-- FASE 10 -->
+        <div class="level-card" id="level-10">
+            <span class="terminal-log">> ERR #110: TENSIÓN MECÁNICA EN PALA</span>
+            <h4 style="margin:5px 0 15px 0; color:var(--accent-cyan);">FASE 10: ESFUERZO DE TRACCIÓN EN RAÍZ DE PALA</h4>
+            <div class="scenario-box">
+                Por efecto del empuje axial, la raíz de la pala sufre una fuerza de tracción de <strong>150.000 N</strong> sobre una sección resistente de fibra de <strong>0,03 m²</strong>. Calcula la tensión mecánica en <strong>MPa</strong>.
+            </div>
+            <div class="widget-grid">
+                <div class="widget"><div class="val">150.000 N</div><div class="lbl">Fuerza Axial</div></div>
+                <div class="widget"><div class="val">0,03 m²</div><div class="lbl">Sección Raíz</div></div>
+            </div>
+            <div class="input-panel">
+                <input type="number" id="in-10" placeholder="Tensión (MPa)">
+                <div class="btn-group">
+                    <button class="btn-action" onclick="checkAnswer(10, 4.9, 5.1)">[ Validar ]</button>
+                    <button class="btn-hint" onclick="showHint(10)">[ Pista (-3 min) ]</button>
+                </div>
+            </div>
+            <div class="feedback" id="fb-10"></div>
+            <div class="hint-box" id="hint-10">💡 RESISTENCIA DE MATERIALES: La tensión es σ = Fuerza / Área. Divide N entre m² para obtener la presión interna en Pascuales (N/m²). El sistema solicita el valor en MegaPascuales (MPa).</div>
+        </div>
+
+        <!-- FASE 11 -->
+        <div class="level-card" id="level-11">
+            <span class="terminal-log">> ERR #111: RELACIÓN DE MULTIPLICADORA</span>
+            <h4 style="margin:5px 0 15px 0; color:var(--accent-cyan);">FASE 11: MULTIPLICADORA PLANETARIA (GEARBOX)</h4>
+            <div class="scenario-box">
+                El rotor principal de 3 palas gira a solo <strong>15 rpm</strong>. Para sincronizar la generadora a <strong>1.500 rpm</strong>, calcula la <strong>relación de transmisión i</strong> necesaria.
+            </div>
+            <div class="widget-grid">
+                <div class="widget"><div class="val">15 rpm</div><div class="lbl">Velocidad Rotor</div></div>
+                <div class="widget"><div class="val">1.500 rpm</div><div class="lbl">Velocidad Generador</div></div>
+            </div>
+            <div class="input-panel">
+                <input type="number" id="in-11" placeholder="Relación i (ej: 100)">
+                <div class="btn-group">
+                    <button class="btn-action" onclick="checkAnswer(11, 99.9, 100.1)">[ Validar ]</button>
+                    <button class="btn-hint" onclick="showHint(11)">[ Pista (-3 min) ]</button>
+                </div>
+            </div>
+            <div class="feedback" id="fb-11"></div>
+            <div class="hint-box" id="hint-11">💡 CINEMÁTICA DE ENGRANAJES: La relación de multiplicación "i" representa cuántas vueltas da el eje rápido del generador por cada sola vuelta del eje lento del rotor.</div>
+        </div>
+
+        <!-- FASE 12 -->
+        <div class="level-card" id="level-12">
+            <span class="terminal-log">> ERR #112: FRECUENCIA ELECTRÓNICA DE RED</span>
+            <h4 style="margin:5px 0 15px 0; color:var(--accent-cyan);">FASE 12: FRECUENCIA DEL GENERADOR DE 4 POLOS</h4>
+            <div class="scenario-box">
+                El generador asíncrono tiene <strong>p = 2 pares de polos</strong> (4 polos en total) y gira a una velocidad de sincronismo de <strong>1.500 rpm</strong>. ¿Cuál es la <strong>frecuencia f en Hertzios (Hz)</strong> que inyecta a la red?
+            </div>
+            <div class="widget-grid">
+                <div class="widget"><div class="val">1.500 rpm</div><div class="lbl">Velocidad Campo</div></div>
+                <div class="widget"><div class="val">2 pares</div><div class="lbl">Pares de Polos</div></div>
+            </div>
+            <div class="input-panel">
+                <input type="number" id="in-12" placeholder="Frecuencia (Hz)">
+                <div class="btn-group">
+                    <button class="btn-action" onclick="checkAnswer(12, 49.9, 50.1)">[ Validar ]</button>
+                    <button class="btn-hint" onclick="showHint(12)">[ Pista (-3 min) ]</button>
+                </div>
+            </div>
+            <div class="feedback" id="fb-12"></div>
+            <div class="hint-box" id="hint-12">💡 ELECTROMAGNETISMO: La fórmula de sincronismo electromagnético es n = (60 · f) / p. Despejando la frecuencia f: f = (n · p) / 60. Multiplica la velocidad en rpm por el número de pares de polos y divide el total entre los segundos.</div>
+        </div>
+
+        <!-- PANTALLA VICTORIA -->
+        <div class="level-card" id="level-13">
+            <div style="text-align: center;">
+                <h2 style="color:var(--accent-green); margin-bottom:5px;">SISTEMA COMPLETAMENTE RESTABLECIDO ⚡</h2>
+                <p style="color:var(--text-muted); font-size:0.9em;">PARQUE EÓLICO AGUAS NUEVAS INYECTANDO ENERGÍA</p>
+                <div class="scenario-box" style="border-left-color: var(--accent-green);">
+                    ¡Excelente trabajo técnico! Habéis recalibrado con éxito las 12 magnitudes operativas del aerogenerador antes del colapso del tiempo de reserva.
+                </div>
+                <button class="btn-action" onclick="location.reload()">[ Reiniciar Consola ]</button>
+            </div>
+        </div>
+
+        <!-- GAME OVER -->
+        <div class="level-card" id="level-failed">
+            <div style="text-align: center; color: var(--accent-red);">
+                <h2>🚨 TIEMPO AGOTADO: SISTEMA BLOQUEADO</h2>
+                <div class="scenario-box" style="border-left-color: var(--accent-red);">
+                    Se ha agotado el tiempo de 60 minutos. Las protecciones mecánicas han aislado definitivamente el parque. Inténtalo de nuevo.
+                </div>
+                <button class="btn-action" style="background-color: var(--accent-red); color: #fff;" onclick="location.reload()">[ Reintentar Misión ]</button>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<script>
+    const totalLevels = 12;
+    let timeLeft = 60 * 60; // 60 minutos
+    let timerInterval = null;
+    let failedAttempts = 0;
+    let isLockedOut = false;
+
+    function startTimer() {
+        timerInterval = setInterval(() => {
+            timeLeft--;
+            let mins = Math.floor(timeLeft / 60);
+            let secs = timeLeft % 60;
+            document.getElementById('timer').textContent = 
+                `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+
+            if (timeLeft <= 0) {
+                clearInterval(timerInterval);
+                document.querySelectorAll('.level-card').forEach(c => c.classList.remove('active'));
+                document.getElementById('level-failed').classList.add('active');
+            }
+        }, 1000);
+    }
+
+    function deductTime(seconds) {
+        timeLeft = Math.max(0, timeLeft - seconds);
+    }
+
+    function updateProgress(lvl) {
+        const p = Math.min(((lvl - 1) / totalLevels) * 100, 100);
+        document.getElementById('progress').style.width = p + '%';
+        if (lvl <= 12) {
+            document.getElementById('phase-counter').textContent = `Fase ${lvl} de 12`;
+        }
+        if (lvl === 13) {
+            clearInterval(timerInterval);
+            const badge = document.getElementById('status-badge');
+            badge.textContent = "SISTEMA ONLINE";
+            badge.classList.add('online');
+            document.getElementById('phase-counter').textContent = "Completado";
+        }
+    }
+
+    function startEscapeRoom() {
+        startTimer();
+        nextLevel(1);
+    }
+
+    function nextLevel(lvl) {
+        failedAttempts = 0;
+        document.querySelectorAll('.level-card').forEach(c => c.classList.remove('active'));
+        document.getElementById(`level-${lvl}`).classList.add('active');
+        updateProgress(lvl);
+    }
+
+    function showError(fbId, msg) {
+        const fb = document.getElementById(fbId);
+        fb.textContent = msg;
+        fb.className = 'feedback error';
+    }
+
+    function showHint(lvl) {
+        if (isLockedOut) return;
+        document.getElementById(`hint-${lvl}`).style.display = 'block';
+        deductTime(180);
+    }
+
+    function triggerRedLockout(lvl) {
+        isLockedOut = true;
+        document.body.classList.add('lockout-alert');
+        
+        const inputs = document.querySelectorAll('input, button');
+        inputs.forEach(el => el.disabled = true);
+
+        showError(`fb-${lvl}`, '🚨 ¡BLOQUEO DE SEGURIDAD! Demasiados intentos erróneos. Sistema congelado 15 segundos.');
+
+        setTimeout(() => {
+            document.body.classList.remove('lockout-alert');
+            inputs.forEach(el => el.disabled = false);
+            failedAttempts = 0;
+            isLockedOut = false;
+            const fb = document.getElementById(`fb-${lvl}`);
+            fb.style.display = 'none';
+        }, 15000);
+    }
+
+    function checkAnswer(lvl, minVal, maxVal) {
+        if (isLockedOut) return;
+
+        const val = parseFloat(document.getElementById(`in-${lvl}`).value);
+        if (!isNaN(val) && val >= minVal && val <= maxVal) {
+            nextLevel(lvl + 1);
+        } else {
+            failedAttempts++;
+            if (failedAttempts >= 5) {
+                triggerRedLockout(lvl);
+            } else {
+                showError(`fb-${lvl}`, `❌ CÓDIGO INCORRECTO. Intento ${failedAttempts}/5 antes de bloqueo de seguridad.`);
+            }
+        }
+    }
+</script>
+
+</body>
+</html>
